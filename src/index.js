@@ -43,7 +43,8 @@ function onSubmit(event) {
     if (inputValue === "") return Notiflix.Notify.failure("Empty query!");
     querry = inputValue;
     clearImgList();
-    page = 1;
+  page = 1;
+  moveScroll = 0;
     fetchImages().then((hits) => {
       if (hits) {
         Notiflix.Notify.success(`Hooray! We found ${hits} images.`)
