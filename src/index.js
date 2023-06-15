@@ -4,22 +4,38 @@ import "notiflix/src/notiflix.css";
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
 import _ from 'lodash';
+import $ from 'jquery';
 
 let page = 1;
 let querry = "";
 let maxPage = 0;
+const elemHeight = 560;
+let moveScroll = 0;
 
 const refs = {
     form: document.querySelector('#search-form'),
     gallery: document.querySelector('.gallery'),
-    btnLoadMore: document.querySelector('.load-more')
+  btnLoadMore: document.querySelector('.load-more'),
+    body: document.body
 }
 const gallerySLb = new SimpleLightbox('.gallery a', { captionsData: "alt", captionDelay: "250" });
 
+refs.body.style.overflow = 'hidden';
 
 refs.form.addEventListener("submit", onSubmit);
 refs.btnLoadMore.addEventListener("click", fetchImages);
-window.addEventListener("scroll", _.debounce(onScroll, 250))
+
+
+if ('onwheel' in document) {
+    // IE9+, FF17+, Ch31+
+    window.addEventListener("wheel", _.debounce(onWheel, 300));
+  } else if ('onmousewheel' in document) {
+    // устаревший вариант события
+    window.addEventListener("mousewheel", _.debounce(onWheel, 300));
+  } else {
+    // Firefox < 17
+    window.addEventListener("MozMousePixelScroll", _.debounce(onWheel, 300));
+  }
 
 function onSubmit(event) {
     event.preventDefault();
@@ -95,15 +111,48 @@ function onError(error) {
     Notiflix.Notify.failure(error.message);
 }
 
-function onScroll() {
-  const scrollPosition = Math.ceil(window.scrollY);
+function checkScrollPositionPage() {
+   const scrollPosition = Math.ceil(window.scrollY);
   const bodyHeight = Math.ceil(document.body.getBoundingClientRect().height);
   const screenHeight = window.screen.height;
-  if ((bodyHeight - scrollPosition) < screenHeight) {
-    if (page <= maxPage) {
-      fetchImages()
-    } else {
-       Notiflix.Notify.failure("We're sorry, but you've reached the end of search results.");
+  return ((bodyHeight - scrollPosition) < screenHeight) ;
+}
+
+function checkScrollPositionElem() {
+   const scrollPosition = Math.ceil(window.scrollY);
+  const bodyHeight = Math.ceil(document.body.getBoundingClientRect().height);
+  return (bodyHeight - scrollPosition) < elemHeight * 1.5;
+}
+
+function onWheel(e) {
+  e.preventDefault ? e.preventDefault() : (e.returnValue = false);
+  const delta = e.deltaY || e.detail || e.wheelDelta;
+  if (delta > 0) {
+    if (checkScrollPositionPage()) {
+      if (page <= maxPage) {
+        fetchImages()
+      } else {
+        Notiflix.Notify.failure("We're sorry, but you've reached the end of search results.");
+      }
     };
+    if (!checkScrollPositionElem()) {
+      moveScroll += 1;
+      scrollAnimate(elemHeight * moveScroll)
+    }
+  } else if (delta < 0) {
+    if (moveScroll > 0) {
+      moveScroll -= 1;
+      scrollAnimate(elemHeight * moveScroll)
+    }
   }
+}
+
+function scrollAnimate(position) {
+  $('html, body').animate(
+      {
+        scrollTop: position,
+      },
+      //duration
+      900,
+    );
 }
